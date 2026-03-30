@@ -1,9 +1,9 @@
 
-# 💰 FinTrack – Smart Money Management System
+# 💰 Finly – Smart Money Management System
 
 ## 📌 Project Overview
 
-FinTrack is a Personal Finance Management and Expense Analysis System developed using Python (Flask) and MySQL.
+Finly is a Personal Finance Management and Expense Analysis System developed using Python (Flask) and MySQL.
 
 The system allows users to record income and expenses, analyze monthly spending, and receive smart financial insights.
 
@@ -47,27 +47,6 @@ The system allows users to record income and expenses, analyze monthly spending,
 - Savings = Total Income – Total Expense
 - Category Warning if spending > 30% of total expenses
 - Monthly summary using SQL aggregation functions
-
----
-
-## 📂 Project Structure
-
-```
-FinTrack/
-│
-├── app.py
-├── database.sql
-├── templates/
-│   ├── index.html
-│   ├── dashboard.html
-│   └── report.html
-│
-├── static/
-│   ├── style.css
-│   └── charts.js
-```
-
----
 
 ## 🎯 Objective
 
