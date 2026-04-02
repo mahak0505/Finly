@@ -10,11 +10,11 @@ Finly is a web-based personal finance management application built for college s
 
 ## 👥 Team
 
-| Name           | Role                     |
-| -------------- | ------------------------ |
-| Disha Lowanshi | Frontend & Design        |
-| Mahak Bansal   | Backend (Python + Flask) |
-| Ansh Zamde     | Database (SQLite)        |
+| Name           | Role                      |
+| -------------- | ------------------------- |
+| Disha Lowanshi | Frontend & Design         |
+| Mahak Bansal   | Backend (Python + Django) |
+| Ansh Zamde     | Database (SQLite)         |
 
 ---
 
