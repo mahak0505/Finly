@@ -8,7 +8,7 @@
 <title>Dashboard — Finly</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800&family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
- <link rel="stylesheet" href="{% static 'css/shared.css' %}">
+<link rel="stylesheet" href="{% static 'css/shared.css' %}">
 </head>
 <body>
 
@@ -30,7 +30,9 @@
       🔔<div class="notif-badge"></div>
       <div class="dropdown" id="notifDropdown" onclick="event.stopPropagation()"></div>
     </div>
-    <a href="{% url 'profile' %}" class="tb-av" style="text-decoration:none; color:inherit;">AZ</a>
+    <a href="{% url 'profile' %}" class="tb-av" style="text-decoration:none; color:inherit;">
+      {{ request.user.username|slice:":2"|upper }}
+    </a>
   </div>
 </div>
 
@@ -39,28 +41,31 @@
   <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sb-profile">
-      <div class="sb-av">AZ</div>
-      <div><div class="sb-name">Ansh Zamde</div><div class="sb-college">IET DAVV · 2nd Year</div></div>
+      <div class="sb-av">{{ request.user.username|slice:":2"|upper }}</div>
+      <div>
+        <div class="sb-name">{{ request.user.get_full_name|default:request.user.username }}</div>
+        <!-- ✅ removed profile.college — needs Profile model, safe default instead -->
+        <div class="sb-college">IET DAVV</div>
+      </div>
     </div>
-    <div class="sb-section">Main</div>
-    <a href="{% url 'dashboard' %}" class="sb-item active"><span class="sb-item-ico">📊</span> Dashboard</a>
-    <a href="{% url 'expenses' %}" class="sb-item"><span class="sb-item-ico">💳</span> Expenses</a>
-    <a href="{% url 'budget_goals' %}" class="sb-item"><span class="sb-item-ico">🎯</span> Budget Goals</a>
-    <a href="{% url 'savings' %}" class="sb-item"><span class="sb-item-ico">💰</span> Savings</a>
-  
-   <div class="sb-section">Intelligence</div>
-   <a href="{% url 'ai_advisor' %}" class="sb-item"><span class="sb-item-ico">🤖</span> AI Advisor <span class="sb-badge">NEW</span></a>
-   <a href="{% url 'analytics' %}" class="sb-item"><span class="sb-item-ico">📈</span> Analytics</a>
-   <a href="{% url 'insights' %}" class="sb-item"><span class="sb-item-ico">💡</span> Insights</a>
 
-   <div class="sb-section">Account</div>
-   <a href="{% url 'settings' %}" class="sb-item"><span class="sb-item-ico">⚙️</span> Settings</a>
-   <a href="{% url 'help' %}" class="sb-item"><span class="sb-item-ico">❓</span> Help</a>
-   <!-- AFTER (fixed) -->
-<a href="{% url 'logout' %}" class="sb-item" style="color: #ef4444; margin-top: 10px;">
-  <span class="sb-item-ico">🚪</span> Logout
-</a>
-</aside>
+    <div class="sb-section">Main</div>
+    <a href="{% url 'dashboard' %}"    class="sb-item active"><span class="sb-item-ico">📊</span> Dashboard</a>
+    <a href="{% url 'expenses' %}"     class="sb-item"><span class="sb-item-ico">💳</span> Expenses</a>
+    <a href="{% url 'budget_goals' %}" class="sb-item"><span class="sb-item-ico">🎯</span> Budget Goals</a>
+    <a href="{% url 'savings' %}"      class="sb-item"><span class="sb-item-ico">💰</span> Savings</a>
+
+    <div class="sb-section">Intelligence</div>
+    <a href="{% url 'ai_advisor' %}"  class="sb-item"><span class="sb-item-ico">🤖</span> AI Advisor <span class="sb-badge">NEW</span></a>
+    <a href="{% url 'analytics' %}"   class="sb-item"><span class="sb-item-ico">📈</span> Analytics</a>
+    <a href="{% url 'insights' %}"    class="sb-item"><span class="sb-item-ico">💡</span> Insights</a>
+
+    <div class="sb-section">Account</div>
+    <a href="{% url 'settings' %}" class="sb-item"><span class="sb-item-ico">⚙️</span> Settings</a>
+    <a href="{% url 'help' %}"     class="sb-item"><span class="sb-item-ico">❓</span> Help</a>
+    <a href="{% url 'logout' %}"   class="sb-item" style="color:#ef4444;margin-top:10px;">
+      <span class="sb-item-ico">🚪</span> Logout
+    </a>
   </aside>
 
   <!-- MAIN CONTENT -->
@@ -69,71 +74,98 @@
     <!-- Header -->
     <div class="page-hdr">
       <div>
-        <div class="pg-title">Welcome,Ansh 👋</div>
-        <div class="pg-sub">Here's your financial overview for this month</div>
+        <div class="pg-title">
+          {% now "H" as current_hour %}
+          {% if current_hour < "12" %}Good morning{% elif current_hour < "17" %}Good afternoon{% else %}Good evening{% endif %},
+          {{ request.user.get_full_name|default:request.user.username }} 👋
+        </div>
+        <div class="pg-sub">Here's your financial overview for {{ today|date:"F Y" }}</div>
+        <div class="pg-date">{{ today|date:"j F Y" }}</div>
       </div>
-      <div class="pg-date" id="currentDate">March 30, 2026</div>
     </div>
 
-    <!-- Stat cards -->
+    <!-- Stat Cards -->
     <div class="stat-row">
       <div class="stat-card highlight">
         <div class="stat-lbl">Spent This Month</div>
-        <div class="stat-val" id="stat-spent">₹0</div>
-        <div class="stat-delta down">↑ 12% vs last month</div>
+        <div class="stat-val">₹{{ total_spent }}</div>
+        <div class="stat-delta {% if change_pct > 0 %}down{% else %}up{% endif %}">
+          {% if change_pct > 0 %}↑{% else %}↓{% endif %} {{ change_pct|stringformat:".1f" }}% vs last month
+        </div>
       </div>
       <div class="stat-card">
         <div class="stat-lbl">Total Savings</div>
-        <div class="stat-val" id="stat-saving">₹0</div>
-        <div class="stat-delta up">↑ ₹400 more than last month</div>
+        <div class="stat-val">₹{{ total_savings }}</div>
+        <div class="stat-delta up">📊 {{ savings_goals.count }} active goal{{ savings_goals.count|pluralize }}</div>
       </div>
       <div class="stat-card">
         <div class="stat-lbl">Budget Remaining</div>
-        <div class="stat-val" id="stat-remaining">₹0</div>
-        <div class="stat-delta wrn">⚠ 8 days left in month</div>
+        <div class="stat-val">₹{{ budget_remaining }}</div>
+        <div class="stat-delta wrn">⚠ {{ days_left }} days left in month</div>
       </div>
       <div class="stat-card">
         <div class="stat-lbl">Daily Average</div>
-        <div class="stat-val" id="stat-avg">₹0</div>
-        <div class="stat-delta up">↓ ₹18 vs last month</div>
+        <div class="stat-val">₹{{ daily_avg }}</div>
+        <div class="stat-delta up">📅 Based on {{ today|date:"j" }} days</div>
       </div>
     </div>
 
     <!-- AI Tip -->
     <div class="ai-tip">
       <div class="ai-tip-ico">🤖</div>
-      <div class="ai-tip-text">Your <strong>food expenses</strong> are 34% above average this week. Cooking in hostel 3 days could save ₹600 before month-end.</div>
+      <div class="ai-tip-text">
+        {% if by_category %}
+          Your top spend is <strong>{{ by_category.0.category }}</strong> at ₹{{ by_category.0.total }} this month.
+        {% else %}
+          Add your first expense to get personalised AI tips!
+        {% endif %}
+      </div>
       <div class="ai-badge">AI TIP</div>
       <button class="ai-tip-btn" onclick="openModal('limitModal')">Set Limit →</button>
     </div>
 
     <!-- Charts Row -->
     <div class="charts-row">
-      <!-- Spending trend -->
+
+      <!-- Spending Trend (static SVG — upgraded to real data below via JS) -->
       <div class="chart-card">
-        <div class="chart-hdr"><span class="chart-title">Spending Trend</span><span class="chart-period">Last 30 days</span></div>
-        <svg class="sparkline" viewBox="0 0 400 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3B82F6" stop-opacity=".3"/><stop offset="100%" stop-color="#3B82F6" stop-opacity="0"/></linearGradient></defs>
-          <path d="M0 62 C15 62 22 44 40 48 C58 52 66 28 90 30 C114 32 124 54 150 50 C176 46 186 18 210 22 C234 26 244 46 268 40 C292 34 302 54 326 48 C350 42 368 58 400 50 L400 80 L0 80 Z" fill="url(#sg)"/>
-          <path d="M0 62 C15 62 22 44 40 48 C58 52 66 28 90 30 C114 32 124 54 150 50 C176 46 186 18 210 22 C234 26 244 46 268 40 C292 34 302 54 326 48 C350 42 368 58 400 50" stroke="#3B82F6" stroke-width="2" stroke-linecap="round"/>
-          <circle cx="210" cy="22" r="4" fill="#60A5FA"/>
-          <circle cx="400" cy="50" r="4" fill="#3B82F6"/>
-        </svg>
-        <div style="display:flex;justify-content:space-between;margin-top:.5rem;">
-          <span style="font-size:.6rem;color:var(--text-muted);">1 Mar</span>
-          <span style="font-size:.6rem;color:var(--text-muted);">10 Mar</span>
-          <span style="font-size:.6rem;color:var(--text-muted);">20 Mar</span>
-          <span style="font-size:.6rem;color:var(--text-muted);">Today</span>
+        <div class="chart-hdr">
+          <span class="chart-title">Spending Trend</span>
+          <span class="chart-period">Last 30 days</span>
+        </div>
+        <canvas id="trendChart" height="80"></canvas>
+        <!-- Pass Django data to JS safely -->
+        <script>
+          const trendLabels = {{ trend_labels|safe }};
+          const trendData   = {{ trend_data|safe }};
+        </script>
+      </div>
+
+      <!-- Category Bars — now from Django -->
+      <div class="chart-card">
+        <div class="chart-hdr">
+          <span class="chart-title">By Category</span>
+          <span class="chart-period">This month</span>
+        </div>
+        <div class="bar-chart" id="catBars">
+          {% if by_category %}
+            {% for cat in by_category %}
+              <div class="bar-wrap">
+                <div class="bar" style="
+                  height: {% widthratio cat.total total_spent 100 %}%;
+                  background: {% cycle '#3B82F6' '#10B981' '#F59E0B' '#A78BFA' '#F87171' %};
+                  opacity: .85;">
+                </div>
+                <span class="bar-label">{{ cat.category }}</span>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="no-data" style="margin:auto">No expenses yet</div>
+          {% endif %}
         </div>
       </div>
 
-      <!-- Category bars -->
-      <div class="chart-card">
-        <div class="chart-hdr"><span class="chart-title">By Category</span><span class="chart-period">This month</span></div>
-        <div class="bar-chart" id="catBars"></div>
-      </div>
-
-      <!-- Donut -->
+      <!-- Donut — now from Django -->
       <div class="chart-card">
         <div class="chart-hdr"><span class="chart-title">Budget Split</span></div>
         <div class="donut-wrap">
@@ -144,10 +176,19 @@
             <circle cx="45" cy="45" r="32" fill="none" stroke="#F59E0B" stroke-width="14" stroke-dasharray="9 121" stroke-dashoffset="-125" stroke-linecap="round"/>
           </svg>
           <div class="donut-legend">
-            <div class="donut-leg-item"><div class="donut-leg-name"><div class="donut-leg-dot" style="background:#3B82F6;"></div>Food</div><div class="donut-leg-val">₹2,180</div></div>
-            <div class="donut-leg-item"><div class="donut-leg-name"><div class="donut-leg-dot" style="background:#10B981;"></div>Travel</div><div class="donut-leg-val">₹860</div></div>
-            <div class="donut-leg-item"><div class="donut-leg-name"><div class="donut-leg-dot" style="background:#F59E0B;"></div>Other</div><div class="donut-leg-val">₹480</div></div>
-            <div class="donut-leg-item"><div class="donut-leg-name"><div class="donut-leg-dot" style="background:#A78BFA;"></div>Books</div><div class="donut-leg-val">₹360</div></div>
+            {% with colors="#3B82F6,#10B981,#F59E0B,#A78BFA,#F87171" %}
+            {% for cat in by_category|slice:":4" %}
+              <div class="donut-leg-item">
+                <div class="donut-leg-name">
+                  <div class="donut-leg-dot" style="background:{% cycle '#3B82F6' '#10B981' '#F59E0B' '#A78BFA' '#F87171' %};"></div>
+                  {{ cat.category }}
+                </div>
+                <div class="donut-leg-val">₹{{ cat.total }}</div>
+              </div>
+            {% empty %}
+              <div class="no-data">No data</div>
+            {% endfor %}
+            {% endwith %}
           </div>
         </div>
       </div>
@@ -155,37 +196,86 @@
 
     <!-- Bottom Row -->
     <div class="bottom-row">
-      <!-- Recent transactions -->
+
+      <!-- Recent Transactions — from Django -->
       <div class="chart-card">
-        <div class="chart-hdr"><span class="chart-title">Recent Transactions</span><a href="expenses.html" class="chart-period" style="text-decoration:none;color:var(--blue-sky);">View all →</a></div>
-        <div class="txn-list" id="txnList">
-          <!-- Transactions generated dynamically -->
+        <div class="chart-hdr">
+          <span class="chart-title">Recent Transactions</span>
+          <a href="{% url 'expenses' %}" class="chart-period" style="text-decoration:none;color:var(--blue-sky);">View all →</a>
+        </div>
+        <div class="txn-list">
+          {% for e in recent_transactions %}
+            <a href="{% url 'expenses' %}" class="txn-item">
+              <div class="txn-ico" style="background:rgba(255,255,255,.05);">
+                {% if e.category == 'Food' %}🍔
+                {% elif e.category == 'Travel' %}🚌
+                {% elif e.category == 'Books' %}📚
+                {% elif e.category == 'Health' %}🏥
+                {% elif e.category == 'Fun' %}🎮
+                {% else %}💸{% endif %}
+              </div>
+              <div style="flex:1">
+                <div class="txn-name">{{ e.title }}</div>
+                <div class="txn-cat">{{ e.category }}</div>
+              </div>
+              <div class="txn-amt down">-₹{{ e.amount }}</div>
+              <div class="txn-date">{{ e.date|date:"d M" }}</div>
+            </a>
+          {% empty %}
+            <div class="no-data">No recent transactions</div>
+          {% endfor %}
         </div>
       </div>
 
-      <!-- Savings goals + quick add -->
+      <!-- Savings Goals + Quick Add -->
       <div style="display:flex;flex-direction:column;gap:1rem;">
         <div class="chart-card">
-          <div class="chart-hdr"><span class="chart-title">Savings Goals</span><span class="chart-period" style="cursor:pointer;color:var(--blue-sky);" onclick="openModal('goalModal')">Add goal +</span></div>
-          <div class="goal-list" id="dashGoals">
-            <!-- Goals generated dynamically -->
+          <div class="chart-hdr">
+            <span class="chart-title">Savings Goals</span>
+            <span class="chart-period" style="cursor:pointer;color:var(--blue-sky);" onclick="openModal('goalModal')">Add goal +</span>
+          </div>
+          <div class="goal-list">
+            {% for g in savings_goals|slice:":2" %}
+              <div class="goal-item">
+                <div class="goal-hdr">
+                  <span class="goal-name">{{ g.name }}</span>
+                  <span class="goal-pct" style="color:#3B82F6;">
+                    {% widthratio g.saved g.target 100 %}%
+                  </span>
+                </div>
+                <div class="goal-bar-bg">
+                  <div class="goal-bar-fill" style="width:{% widthratio g.saved g.target 100 %}%;background:linear-gradient(135deg,#3B82F6,#60A5FA);"></div>
+                </div>
+                <div class="goal-meta">
+                  <span>₹{{ g.saved }} saved</span>
+                  <span>₹{{ g.target }} goal</span>
+                </div>
+              </div>
+            {% empty %}
+              <div class="no-data">No goals yet</div>
+            {% endfor %}
           </div>
         </div>
-        <div class="quick-add">
+
+        <!-- Quick Add — posts to Django view -->
+        <form method="POST" action="{% url 'expenses' %}" class="quick-add" id="quickAddForm">
+          {% csrf_token %}
+          <input type="hidden" name="category" id="qaCategory" value="Food">
           <div class="qa-title">⚡ Quick Add Expense</div>
           <div class="qa-cats">
-            <div class="qa-cat sel" onclick="selectCat(this)">🍔 Food</div>
-            <div class="qa-cat" onclick="selectCat(this)">🚌 Travel</div>
-            <div class="qa-cat" onclick="selectCat(this)">📚 Books</div>
-            <div class="qa-cat" onclick="selectCat(this)">🎮 Fun</div>
-            <div class="qa-cat" onclick="selectCat(this)">🏥 Health</div>
+            <div class="qa-cat sel" onclick="selectCat(this,'Food')">🍔 Food</div>
+            <div class="qa-cat" onclick="selectCat(this,'Travel')">🚌 Travel</div>
+            <div class="qa-cat" onclick="selectCat(this,'Books')">📚 Books</div>
+            <div class="qa-cat" onclick="selectCat(this,'Fun')">🎮 Fun</div>
+            <div class="qa-cat" onclick="selectCat(this,'Health')">🏥 Health</div>
           </div>
           <div class="qa-row">
-            <input class="qa-inp" type="number" placeholder="₹ Amount" id="qaAmt">
-            <input class="qa-inp" type="text" placeholder="Note (optional)" id="qaNote" style="flex:1.5">
-            <button class="qa-btn" onclick="addExpense()">Add →</button>
+            <input class="qa-inp" type="number" name="amount" placeholder="₹ Amount" id="qaAmt" required>
+            <input class="qa-inp" type="text"   name="title" placeholder="What for?" id="qaNote" style="flex:1.5" required>
+            <input type="hidden" name="date" value="{{ today|date:'Y-m-d' }}">
+            <button type="submit" class="qa-btn">Add →</button>
           </div>
-        </div>
+        </form>
       </div>
     </div>
 
@@ -199,17 +289,20 @@
       <div class="modal-title">Set Budget Limit</div>
       <button class="modal-close" onclick="closeModals()">×</button>
     </div>
-    <div class="frm-grp">
-      <label class="frm-lbl">Category</label>
-      <select class="frm-inp" id="limitCat" style="color:var(--blue-deep)">
-        <option>Food</option><option>Travel</option><option>Books</option><option>Accommodation</option><option>Other</option>
-      </select>
-    </div>
-    <div class="frm-grp">
-      <label class="frm-lbl">Monthly Limit (₹)</label>
-      <input type="number" class="frm-inp" id="limitAmt" placeholder="e.g. 2000">
-    </div>
-    <button class="btn-primary" onclick="saveLimit()">Save Limit</button>
+    <form method="POST" action="{% url 'budget_goals' %}">
+      {% csrf_token %}
+      <div class="frm-grp">
+        <label class="frm-lbl">Category</label>
+        <select class="frm-inp" name="category">
+          <option>Food</option><option>Travel</option><option>Books</option><option>Accommodation</option><option>Other</option>
+        </select>
+      </div>
+      <div class="frm-grp">
+        <label class="frm-lbl">Monthly Limit (₹)</label>
+        <input type="number" class="frm-inp" name="limit" placeholder="e.g. 2000">
+      </div>
+      <button type="submit" class="btn-primary">Save Limit</button>
+    </form>
   </div>
 </div>
 
@@ -219,126 +312,65 @@
       <div class="modal-title">Add Savings Goal</div>
       <button class="modal-close" onclick="closeModals()">×</button>
     </div>
-    <div class="frm-grp">
-      <label class="frm-lbl">Goal Name</label>
-      <input type="text" class="frm-inp" id="goalName" placeholder="e.g. New Phone">
-    </div>
-    <div class="frm-grp">
-      <label class="frm-lbl">Target Amount (₹)</label>
-      <input type="number" class="frm-inp" id="goalTarget" placeholder="e.g. 50000">
-    </div>
-    <button class="btn-primary" onclick="saveNewGoal()">Create Goal</button>
+    <form method="POST" action="{% url 'savings' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create">
+      <div class="frm-grp">
+        <label class="frm-lbl">Goal Name</label>
+        <input type="text" class="frm-inp" name="name" placeholder="e.g. New Phone">
+      </div>
+      <div class="frm-grp">
+        <label class="frm-lbl">Target Amount (₹)</label>
+        <input type="number" class="frm-inp" name="target" placeholder="e.g. 50000">
+      </div>
+      <button type="submit" class="btn-primary">Create Goal</button>
+    </form>
   </div>
 </div>
- 
-<script src="{% static 'js/store.js' %}"></script>
+
 <script>
-// Date
-const d = new Date();
-document.getElementById('currentDate').textContent = d.toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+// ✅ Modal helpers
+function openModal(id)  { document.getElementById(id).style.display = 'flex'; }
+function closeModals()  { document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none'); }
 
-// Load Stats
-function renderDashboard() {
-  const exps = Store.get('expenses');
-  const goals = Store.get('goals');
-  const buds = Store.get('budgets');
-  
-  // Calculate stats
-  // Group only this month explicitly or just sum all for demo. We'll sum all for simple demo, but in real life we'd filter.
-  const spentThisMonth = exps.reduce((acc, curr) => acc + curr.amt, 0);
-  const totalSavings = goals.reduce((acc, curr) => acc + curr.current, 0);
-  
-  const totalBudgets = Object.values(buds).reduce((a,b)=>a+b,0);
-  const remaining = totalBudgets - spentThisMonth;
-  const avg = Math.round(spentThisMonth / (d.getDate() || 1));
-
-  document.getElementById('stat-spent').textContent = Store.formatMoney(spentThisMonth);
-  document.getElementById('stat-saving').textContent = Store.formatMoney(totalSavings);
-  document.getElementById('stat-remaining').textContent = Store.formatMoney(remaining);
-  document.getElementById('stat-avg').textContent = Store.formatMoney(avg);
-
-  // Render Category Bars
-  const catTotals = {};
-  exps.forEach(e => { catTotals[e.cat] = (catTotals[e.cat] || 0) + e.amt; });
-  const barsEl = document.getElementById('catBars');
-  barsEl.innerHTML = '';
-  const colors = ['#3B82F6', '#10B981', '#F59E0B', '#A78BFA', '#F87171'];
-  Object.keys(catTotals).slice(0, 5).forEach((c, i) => {
-    const pct = spentThisMonth ? Math.min(100, (catTotals[c] / spentThisMonth) * 100) : 0;
-    const w = document.createElement('div');
-    w.className='bar-wrap';
-    w.innerHTML=`<div class="bar" style="height:${Math.max(10, pct)}%;background:${colors[i%5]};opacity:.8;"></div><span class="bar-label">${c}</span>`;
-    barsEl.appendChild(w);
-  });
-  if(Object.keys(catTotals).length === 0) barsEl.innerHTML = '<div class="no-data" style="margin:auto">No expenses yet</div>';
-
-  // Render Recent Transactions
-  const txnList = document.getElementById('txnList');
-  let txnHtml = '';
-  exps.slice(0, 5).forEach(e => {
-    let ico = '💸'; 
-    if(e.cat==='Food') ico='🍔'; if(e.cat==='Travel') ico='🚌'; if(e.cat==='Books') ico='📚'; if(e.cat==='Health') ico='🏥';
-    txnHtml += `<a href="expenses.html" class="txn-item">
-      <div class="txn-ico" style="background:rgba(255,255,255,.05);">${ico}</div>
-      <div style="flex:1"><div class="txn-name">${e.name}</div><div class="txn-cat">${e.cat}</div></div>
-      <div class="txn-amt down">-₹${e.amt}</div>
-      <div class="txn-date">${Store.formatDate(e.date)}</div>
-    </a>`;
-  });
-  txnList.innerHTML = txnHtml || '<div class="no-data">No recent transactions</div>';
-
-  // Render Goals
-  const goalList = document.getElementById('dashGoals');
-  let gHtml = '';
-  goals.slice(0,2).forEach(g => {
-    const pct = g.target > 0 ? Math.min(100, Math.round((g.current / g.target) * 100)) : 0;
-    gHtml += `<div class="goal-item">
-      <div class="goal-hdr"><span class="goal-name">${g.name}</span><span class="goal-pct" style="color:${g.colors[0]}">${pct}%</span></div>
-      <div class="goal-bar-bg"><div class="goal-bar-fill" style="width:${pct}%;background:linear-gradient(135deg,${g.colors[0]},${g.colors[1]});"></div></div>
-      <div class="goal-meta"><span>₹${g.current} saved</span><span>₹${g.target} goal</span></div>
-    </div>`;
-  });
-  goalList.innerHTML = gHtml || '<div class="no-data">No goals yet</div>';
+// ✅ Quick add category selection — also updates hidden input
+function selectCat(el, cat) {
+  document.querySelectorAll('.qa-cat').forEach(c => c.classList.remove('sel'));
+  el.classList.add('sel');
+  document.getElementById('qaCategory').value = cat;
 }
 
-document.addEventListener('DOMContentLoaded', renderDashboard);
-
-function saveLimit() {
-  const cat = document.getElementById('limitCat').value;
-  const amt = document.getElementById('limitAmt').value;
-  if(!amt) return;
-  Store.updateBudget(cat, amt);
-  closeModals();
-  renderDashboard();
-}
-
-function saveNewGoal() {
-  const name = document.getElementById('goalName').value;
-  const trg = document.getElementById('goalTarget').value;
-  if(!name || !trg) return;
-  Store.addGoal(name, trg);
-  closeModals();
-  renderDashboard();
-}
-
-// Quick add cat select
-function selectCat(el){document.querySelectorAll('.qa-cat').forEach(c=>c.classList.remove('sel'));el.classList.add('sel');}
-function addExpense(){
-  const amt=document.getElementById('qaAmt').value;
-  const note=document.getElementById('qaNote').value;
-  if(!amt)return;
-  const catText = document.querySelector('.qa-cat.sel')?.textContent.trim() || 'Other';
-  const cat = catText.includes(' ') ? catText.split(' ')[1] : catText;
-  Store.addExpense(note || 'Quick Add', cat, amt);
-  document.getElementById('qaAmt').value='';
-  document.getElementById('qaNote').value='';
-  
-  const btn = document.querySelector('.qa-btn');
-  btn.textContent = 'Added ✓';
-  btn.style.background = '#10B981';
-  setTimeout(() => { btn.textContent = 'Add →'; btn.style.background = 'var(--gradient-blue)'; }, 2000);
-  
-  renderDashboard();
+// ✅ Spending trend chart using native Canvas (no Chart.js dependency needed)
+const labels = trendLabels;
+const data   = trendData;
+if (labels.length && document.getElementById('trendChart')) {
+  const canvas = document.getElementById('trendChart');
+  const ctx = canvas.getContext('2d');
+  canvas.width  = canvas.offsetWidth || 380;
+  canvas.height = 80;
+  const max = Math.max(...data, 1);
+  const w = canvas.width, h = canvas.height, pad = 10;
+  const pts = data.map((v, i) => ({
+    x: pad + (i / Math.max(data.length - 1, 1)) * (w - pad * 2),
+    y: h - pad - ((v / max) * (h - pad * 2))
+  }));
+  // Gradient fill
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, 'rgba(59,130,246,0.3)');
+  grad.addColorStop(1, 'rgba(59,130,246,0)');
+  ctx.beginPath();
+  pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+  ctx.lineTo(pts[pts.length-1].x, h);
+  ctx.lineTo(pts[0].x, h);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+  // Line
+  ctx.beginPath();
+  pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+  ctx.strokeStyle = '#3B82F6';
+  ctx.lineWidth = 2;
+  ctx.stroke();
 }
 </script>
 </body>
