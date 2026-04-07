@@ -23,34 +23,45 @@
        <div class="chart-card">
   <div class="chart-hdr"><span class="chart-title">Personal Information</span></div>
   <form method="POST" action="{% url 'profile' %}">
-    {% csrf_token %}
-    {% if messages %}
-      {% for message in messages %}
-        <div style="background:rgba(16,185,129,.1); border:1px solid rgba(16,185,129,.3); 
-                    color:#10B981; padding:10px 14px; border-radius:8px; 
-                    font-size:.85rem; margin-bottom:1rem;">
-          {{ message }}
-        </div>
-      {% endfor %}
-    {% endif %}
-    <div class="frm-grp">
-      <label class="frm-lbl">First Name</label>
-      <input type="text" class="frm-inp" name="first_name"
-             value="{{ request.user.first_name }}" placeholder="e.g. Ansh">
-    </div>
-    <div class="frm-grp">
-      <label class="frm-lbl">Last Name</label>
-      <input type="text" class="frm-inp" name="last_name"
-             value="{{ request.user.last_name }}" placeholder="e.g. Zamde">
-    </div>
-    <div class="frm-grp">
-      <label class="frm-lbl">Email</label>
-      <input type="email" class="frm-inp" name="email"
-             value="{{ request.user.email }}" placeholder="you@example.com">
-    </div>
-    <button type="submit" class="btn-primary">Save Profile</button>
-  </form>
-</div>
+  {% csrf_token %}
+  
+  {% if messages %}
+    {% for message in messages %}
+      <div style="background:rgba(16,185,129,.1); border:1px solid rgba(16,185,129,.3); 
+                  color:#10B981; padding:10px 14px; border-radius:8px; 
+                  font-size:.85rem; margin-bottom:1rem;">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="frm-grp">
+    <label class="frm-lbl">First Name</label>
+    <input type="text" class="frm-inp" name="first_name" value="{{ request.user.first_name }}">
+  </div>
+  <div class="frm-grp">
+    <label class="frm-lbl">Last Name</label>
+    <input type="text" class="frm-inp" name="last_name" value="{{ request.user.last_name }}">
+  </div>
+  <div class="frm-grp">
+    <label class="frm-lbl">Email</label>
+    <input type="email" class="frm-inp" name="email" value="{{ request.user.email }}">
+  </div>
+
+  <div class="frm-grp">
+    <label class="frm-lbl">College</label>
+    <input type="text" class="frm-inp" name="college" 
+           value="{{ request.user.profile.college }}" placeholder="e.g. IET DAVV">
+  </div>
+
+  <div class="frm-grp">
+    <label class="frm-lbl">Location / Address</label>
+    <input type="text" class="frm-inp" name="address" 
+           value="{{ request.user.profile.address }}" placeholder="e.g. UK">
+  </div>
+
+  <button type="submit" class="btn-primary">Save Profile</button>
+</form>
       
       <div class="chart-card">
         <div class="chart-hdr"><span class="chart-title">AI Advisor Configuration</span></div>

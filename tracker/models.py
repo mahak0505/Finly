@@ -1,6 +1,8 @@
 # tracker/models.py
 from django.db import models
 from django.contrib.auth.models import User
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 class Expense(models.Model):
     CATEGORIES = [
@@ -38,3 +40,22 @@ class SavingsGoal(models.Model):
 
     def __str__(self):
         return self.name
+    
+class Profile(models.Model):
+    # Change this line from ForeignKey to OneToOneField
+    user = models.OneToOneField(User, on_delete=models.CASCADE) 
+    college = models.CharField(max_length=100, default="IET DAVV")
+    address = models.CharField(max_length=100, default="Indore")
+    def __str__(self):
+        return f"{self.user.username}'s Profile"
+    
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        Profile.objects.create(user=instance)
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    """Saves the Profile whenever the User is saved, with a safety check."""
+    if hasattr(instance, 'profile'):
+        instance.profile.save()

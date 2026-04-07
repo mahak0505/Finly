@@ -10,7 +10,8 @@ from django.utils import timezone
 from django.db.models import Sum, Avg
 from datetime import datetime, timedelta
 import json
-from .models import Expense, SavingsGoal, Budget
+from .models import Expense, SavingsGoal, Budget, Profile
+from decimal import Decimal,InvalidOperation
 
 
 # ─────────────────────────────────────────────
@@ -37,16 +38,14 @@ def login_view(request):
         username = request.POST.get('username', '').strip()
         password = request.POST.get('password', '')
         user = authenticate(request, username=username, password=password)
-        
+
         if user is not None:
             login(request, user)
             return redirect('dashboard')
         else:
             messages.error(request, 'Invalid username or password.')
-            # Stay on the landing page but keep the login modal open
             return render(request, 'finly-landing.html', {'show_login': True})
 
-    # If someone just types /login/ into the browser, show them the landing page
     return redirect('landing')
 
 
@@ -104,8 +103,8 @@ def dashboard(request):
         date__lt=first_day
     )
 
-    total_spent       = monthly_expenses.aggregate(Sum('amount'))['amount__sum'] or 0
-    last_month_total  = last_month_expenses.aggregate(Sum('amount'))['amount__sum'] or 0
+    total_spent      = monthly_expenses.aggregate(Sum('amount'))['amount__sum'] or 0
+    last_month_total = last_month_expenses.aggregate(Sum('amount'))['amount__sum'] or 0
 
     # savings
     savings_goals = SavingsGoal.objects.filter(user=user)
@@ -144,18 +143,18 @@ def dashboard(request):
         change_pct = 0
 
     context = {
-        'total_spent'          : total_spent,
-        'total_savings'        : total_savings,
-        'budget_remaining'     : budget_remaining,
-        'daily_avg'            : daily_avg,
-        'by_category'          : list(by_category),
-        'trend_labels'         : json.dumps(trend_labels),
-        'trend_data'           : json.dumps(trend_data),
-        'recent_transactions'  : recent_transactions,
-        'savings_goals'        : savings_goals,
-        'change_pct'           : change_pct,
-        'days_left'            : (first_day.replace(month=first_day.month % 12 + 1) - today).days,
-        'today'                : today,
+        'total_spent'         : total_spent,
+        'total_savings'       : total_savings,
+        'budget_remaining'    : budget_remaining,
+        'daily_avg'           : daily_avg,
+        'by_category'         : list(by_category),
+        'trend_labels'        : json.dumps(trend_labels),
+        'trend_data'          : json.dumps(trend_data),
+        'recent_transactions' : recent_transactions,
+        'savings_goals'       : savings_goals,
+        'change_pct'          : change_pct,
+        'days_left'           : (first_day.replace(month=first_day.month % 12 + 1) - today).days,
+        'today'               : today,
     }
     return render(request, 'dashboard.html', context)
 
@@ -168,7 +167,6 @@ def expenses_view(request):
     user = request.user
 
     if request.method == 'POST':
-        # Add new expense
         title    = request.POST.get('title')
         amount   = request.POST.get('amount')
         category = request.POST.get('category')
@@ -182,7 +180,6 @@ def expenses_view(request):
         messages.success(request, 'Expense added!')
         return redirect('expenses')
 
-    # Filters from GET params
     category_filter = request.GET.get('category', '')
     month_filter    = request.GET.get('month', '')
     search          = request.GET.get('search', '')
@@ -199,7 +196,6 @@ def expenses_view(request):
 
     total = expenses.aggregate(Sum('amount'))['amount__sum'] or 0
 
-    # All distinct categories for filter dropdown
     categories = Expense.objects.filter(user=user).values_list(
         'category', flat=True
     ).distinct()
@@ -249,7 +245,6 @@ def budget_goals_view(request):
     if request.method == 'POST':
         category = request.POST.get('category')
         limit    = request.POST.get('limit')
-        # Update if exists for this month, else create
         Budget.objects.update_or_create(
             user=user, category=category, month=first_day,
             defaults={'limit': limit}
@@ -259,7 +254,6 @@ def budget_goals_view(request):
 
     budgets = Budget.objects.filter(user=user, month=first_day)
 
-    # Annotate each budget with amount spent
     budget_data = []
     for b in budgets:
         spent = Expense.objects.filter(
@@ -299,48 +293,63 @@ def savings_view(request):
         action = request.POST.get('action')
 
         if action == 'create':
-            name       = request.POST.get('name')
-            target     = request.POST.get('target')
-            icon       = request.POST.get('icon', '🎯')
-            SavingsGoal.objects.create(
-                user=user, name=name, target=target, icon=icon
-            )
-            messages.success(request, 'Goal created!')
+            name   = request.POST.get('name')
+            target = request.POST.get('target')
+            icon   = request.POST.get('icon', '🎯')
+            
+            # Use Decimal for target to match the model
+            try:
+                target_val = Decimal(target) if target else Decimal('0')
+                SavingsGoal.objects.create(user=user, name=name, target=target_val, icon=icon)
+                messages.success(request, 'Goal created!')
+            except (InvalidOperation, ValueError):
+                messages.error(request, 'Invalid target amount.')
 
         elif action == 'add_funds':
             goal_id = request.POST.get('goal_id')
-            amount  = float(request.POST.get('amount', 0))
-            goal    = get_object_or_404(SavingsGoal, id=goal_id, user=user)
-            goal.saved = min(goal.saved + amount, goal.target)
-            goal.save()
-            messages.success(request, f'₹{amount} added to {goal.name}!')
+            amount_str = request.POST.get('amount', '0')
+            
+            if goal_id and amount_str:
+                goal = get_object_or_404(SavingsGoal, id=goal_id, user=user)
+                try:
+                    # Convert input string to Decimal instead of float
+                    amount = Decimal(amount_str)
+                    
+                    # Both values are now Decimals, so addition works perfectly
+                    goal.saved = min(goal.saved + amount, goal.target)
+                    goal.save()
+                    messages.success(request, f'₹{amount} added to {goal.name}!')
+                except (InvalidOperation, ValueError):
+                    messages.error(request, 'Please enter a valid numeric amount.')
 
         elif action == 'delete':
             goal_id = request.POST.get('goal_id')
-            goal    = get_object_or_404(SavingsGoal, id=goal_id, user=user)
+            goal = get_object_or_404(SavingsGoal, id=goal_id, user=user)
             goal.delete()
             messages.success(request, 'Goal deleted.')
 
         return redirect('savings')
 
+    # GET request logic
     goals = SavingsGoal.objects.filter(user=user)
-    total_saved  = goals.aggregate(Sum('saved'))['saved__sum'] or 0
-    total_target = goals.aggregate(Sum('target'))['target__sum'] or 0
+    total_saved  = goals.aggregate(Sum('saved'))['saved__sum'] or Decimal('0')
+    total_target = goals.aggregate(Sum('target'))['target__sum'] or Decimal('0')
 
     goals_data = []
     for g in goals:
         goals_data.append({
-            'goal'    : g,
-            'percent' : min(round((g.saved / g.target) * 100), 100) if g.target else 0,
+            'goal': g,
+            # Ensure division uses the same types
+             # Convert to float so 500/1000 becomes 0.5 instead of 0
+            'percent': min(round((float(g.saved) / float(g.target)) * 100), 100) if g.target else 0
         })
 
     context = {
-        'goals_data'   : goals_data,
-        'total_saved'  : total_saved,
-        'total_target' : total_target,
+        'goals_data': goals_data,
+        'total_saved': total_saved,
+        'total_target': total_target,
     }
     return render(request, 'savings.html', context)
-
 
 # ─────────────────────────────────────────────
 #  ANALYTICS
@@ -350,7 +359,6 @@ def analytics_view(request):
     user = request.user
     today = timezone.now().date()
 
-    # Last 6 months data for bar chart
     monthly_data = []
     for i in range(5, -1, -1):
         month_date = (today.replace(day=1) - timedelta(days=i * 30)).replace(day=1)
@@ -364,17 +372,14 @@ def analytics_view(request):
             'total': float(total)
         })
 
-    # Category breakdown all time
     by_category = Expense.objects.filter(user=user).values('category').annotate(
         total=Sum('amount')
     ).order_by('-total')
 
-    # Top spending days
     top_days = Expense.objects.filter(user=user).values('date').annotate(
         total=Sum('amount')
     ).order_by('-total')[:5]
 
-    # Average daily spending
     avg_daily = Expense.objects.filter(user=user).values('date').annotate(
         total=Sum('amount')
     ).aggregate(Avg('total'))['total__avg'] or 0
@@ -398,10 +403,7 @@ def ai_advisor_view(request):
     today = timezone.now().date()
     first_day = today.replace(day=1)
 
-    # Pass spending summary so your JS/AI can use it
-    monthly_expenses = Expense.objects.filter(
-        user=user, date__gte=first_day
-    )
+    monthly_expenses = Expense.objects.filter(user=user, date__gte=first_day)
     total_spent = monthly_expenses.aggregate(Sum('amount'))['amount__sum'] or 0
     by_category = monthly_expenses.values('category').annotate(
         total=Sum('amount')
@@ -428,7 +430,6 @@ def insights_view(request):
         total=Sum('amount')
     ).order_by('-total').first()
 
-    # Week over week
     this_week_start = today - timedelta(days=today.weekday())
     last_week_start = this_week_start - timedelta(days=7)
 
@@ -450,7 +451,7 @@ def insights_view(request):
 
 
 # ─────────────────────────────────────────────
-#  PROFILE
+#  PROFILE  ← single merged definition
 # ─────────────────────────────────────────────
 @login_required(login_url='/')
 def profile_view(request):
@@ -458,10 +459,17 @@ def profile_view(request):
 
     if request.method == 'POST':
         user.first_name = request.POST.get('first_name', user.first_name)
-        user.last_name  = request.POST.get('last_name', user.last_name)
-        user.email      = request.POST.get('email', user.email)
+        user.last_name  = request.POST.get('last_name',  user.last_name)
+        user.email      = request.POST.get('email',      user.email)
         user.save()
-        messages.success(request, 'Profile updated!')
+
+        # Keep Profile fields in sync
+        profile, _ = Profile.objects.get_or_create(user=user)
+        profile.college = request.POST.get('college', profile.college)
+        profile.address = request.POST.get('address', profile.address)
+        profile.save()
+
+        messages.success(request, 'Profile updated successfully!')
         return redirect('profile')
 
     total_expenses = Expense.objects.filter(user=user).count()
@@ -477,7 +485,7 @@ def profile_view(request):
 
 
 # ─────────────────────────────────────────────
-#  SETTINGS
+#  SETTINGS  ← single merged definition
 # ─────────────────────────────────────────────
 @login_required(login_url='/')
 def settings_view(request):
@@ -503,6 +511,19 @@ def settings_view(request):
         elif action == 'delete_account':
             user.delete()
             return redirect('landing')
+
+        elif action == 'update_profile':
+            user.first_name = request.POST.get('first_name', user.first_name)
+            user.last_name  = request.POST.get('last_name',  user.last_name)
+            user.email      = request.POST.get('email',      user.email)
+            user.save()
+
+            profile, _ = Profile.objects.get_or_create(user=user)
+            profile.college = request.POST.get('college', profile.college)
+            profile.address = request.POST.get('address', profile.address)
+            profile.save()
+
+            messages.success(request, 'Settings updated successfully!')
 
         return redirect('settings')
 
@@ -547,3 +568,4 @@ def changelog_view(request):
 
 def contact_view(request):
     return render(request, 'contact.html')
+    

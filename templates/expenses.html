@@ -93,8 +93,7 @@
     <button class="btn-primary" onclick="saveNewExpense()">Add Expense</button>
   </div>
 </div>
-
-<script src="{% static 'js/store.js' %}"></script>
+  <script src="{% static 'js/store.js' %}"></script>  
 <script>
 function renderExpenses() {
   const exps = Store.get('expenses');

@@ -70,7 +70,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'finly_backend.wsgi.application'
-
+ROOT_URLCONF = 'finly_backend.urls'
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
@@ -78,7 +78,7 @@ WSGI_APPLICATION = 'finly_backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR /'db'/ 'db.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 

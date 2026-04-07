@@ -15,81 +15,118 @@
 <div class="app-layout">
  
 
-  <main class="main-content">
-    <div class="page-hdr">
-      <div><div class="pg-title">Savings Goals 💰</div><div class="pg-sub">Track your progress toward big purchases</div></div>
-      <button class="btn-primary" style="width:auto; padding: 8px 16px;" onclick="openModal('newGoalModal')">+ New Goal</button>
+   <main class="main-content">
+  <div class="page-hdr">
+    <div>
+      <div class="pg-title">Savings Goals 💰</div>
+      <div class="pg-sub">Welcome back, {{ request.user.username }}</div>
     </div>
-    
-    <div class="goal-list" id="goalsCont" style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem;"></div>
-  </main>
+    <button class="btn-primary" onclick="openModal('newGoalModal')">+ New Goal</button>
+  </div>
+  
+  <div class="goal-list" style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem;">
+   {% for g_data in goals_data %}
+      <div class="chart-card">
+        <div class="goal-hdr">
+          <span class="goal-name">{{ g_data.goal.name }}</span>
+          <span class="goal-pct">{{ g_data.percent }}%</span>
+        </div>
+        
+        <div class="goal-bar-bg">
+          <div class="goal-bar-fill" style="width: {{ g_data.percent }}% !important;"></div>
+        </div>
+
+        <div class="goal-meta">
+          <span>₹{{ g_data.goal.saved }} saved</span>
+          <span>₹{{ g_data.goal.target }} target</span>
+        </div>
+        <button class="btn-primary" style="margin-top:1rem; width:100%;" 
+                onclick="openFundModal('{{ g_data.goal.id }}')">
+          + Add Funds
+        </button>
+      </div>
+   {% endfor %}
+</div>
+   
+</main>
 </div>
 
 <!-- Modals -->
 <div class="modal-overlay" id="newGoalModal" onclick="closeModals()">
   <div class="modal-box" onclick="event.stopPropagation()">
-    <div class="modal-hdr"><div class="modal-title">New Savings Goal</div><button class="modal-close" onclick="closeModals()">×</button></div>
-    <div class="frm-grp"><label class="frm-lbl">Goal Name</label><input type="text" class="frm-inp" id="gn"></div>
-    <div class="frm-grp"><label class="frm-lbl">Target Amount</label><input type="number" class="frm-inp" id="gt"></div>
-    <button class="btn-primary" onclick="saveNewG()">Create</button>
+    <div class="modal-hdr">
+      <div class="modal-title">New Savings Goal</div>
+      <button class="modal-close" onclick="closeModals()">×</button>
+    </div>
+     <form method="POST" action="{% url 'savings' %}">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="create">
+  
+  <div class="frm-grp">
+    <label class="frm-lbl">Goal Name</label>
+    <input type="text" class="frm-inp" name="name" required>
+  </div>
+  <div class="frm-grp">
+    <label class="frm-lbl">Target Amount (₹)</label>
+    <input type="number" class="frm-inp" name="target" required>
+  </div>
+  <div class="frm-grp">
+    <label class="frm-lbl">Icon (Emoji)</label>
+    <input type="text" class="frm-inp" name="icon" value="🎯">
+  </div>
+  
+  <button type="submit" class="btn-primary">Create Goal</button>
+</form>
   </div>
 </div>
 
 <div class="modal-overlay" id="addFundModal" onclick="closeModals()">
   <div class="modal-box" onclick="event.stopPropagation()">
-    <div class="modal-hdr"><div class="modal-title">Add Funds to Goal</div><button class="modal-close" onclick="closeModals()">×</button></div>
-    <input type="hidden" id="fundId">
-    <div class="frm-grp"><label class="frm-lbl">Amount to add (₹)</label><input type="number" class="frm-inp" id="fundAmt"></div>
-    <button class="btn-primary" onclick="processFund()">Add Funds</button>
+    <div class="modal-hdr">
+      <div class="modal-title">Add Funds to Goal</div>
+      <button class="modal-close" onclick="closeModals()">×</button>
+    </div>
+    <form method="POST" action="{% url 'savings' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="add_funds">
+      <input type="hidden" name="goal_id" id="fundId"> 
+      
+      <div class="frm-grp">
+        <label class="frm-lbl">Amount to add (₹)</label>
+        <input type="number" class="frm-inp" name="amount" id="fundAmt" required min="1">
+      </div>
+      <button type="submit" class="btn-primary">Add Funds</button>
+    </form>
   </div>
 </div>
 
 <script src="{% static 'js/store.js' %}"></script>
 <script>
-function renderGoals() {
-  const goals = Store.get('goals');
-  const cont = document.getElementById('goalsCont');
-  let html = '';
-  goals.forEach(g => {
-    const pct = Math.min(100, Math.round((g.current / g.target) * 100));
-    html += `
-    <div class="chart-card">
-      <div class="goal-hdr"><span class="goal-name" style="font-size:1.1rem">${g.name}</span><span class="goal-pct" style="font-size:1.2rem; color:${g.colors[0]}">${pct}%</span></div>
-      <div class="goal-bar-bg" style="height:12px; margin: 15px 0;"><div class="goal-bar-fill" style="width:${pct}%;background:linear-gradient(135deg,${g.colors[0]},${g.colors[1]});"></div></div>
-      <div class="goal-meta" style="font-size:.85rem; margin-bottom: 20px;"><span><strong style="color:var(--white)">₹${g.current}</strong> saved</span><span><strong style="color:var(--white)">₹${g.target}</strong> target</span></div>
-      <button class="btn-primary" style="background:var(--white-08);" onclick="openFundModal('${g.id}')">Add Funds +</button>
-    </div>`;
-  });
-  cont.innerHTML = html;
+   // ✅ Use the 'active' class to match your store.js logic
+function openModal(id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('active');
 }
 
-function saveNewG() {
-  const n = document.getElementById('gn').value;
-  const t = document.getElementById('gt').value;
-  if(n && t) { Store.addGoal(n, t); closeModals(); renderGoals(); }
+function closeModals() {
+    document.querySelectorAll('.modal-overlay').forEach(m => {
+        m.classList.remove('active');
+    });
 }
 
-function openFundModal(id) {
-  document.getElementById('fundId').value = id;
-  document.getElementById('fundAmt').value = '';
-  openModal('addFundModal');
+ function openFundModal(id) {
+    console.log("Opening fund modal for Goal ID:", id); // This will show in your console
+    const fundIdInput = document.getElementById('fundId');
+    
+    if (fundIdInput) {
+        fundIdInput.value = id;
+        document.getElementById('fundAmt').value = '';
+        openModal('addFundModal');
+        console.log("Input value set to:", fundIdInput.value);
+    } else {
+        console.error("Could not find the element with ID 'fundId'");
+    }
 }
-
-function processFund() {
-  const id = document.getElementById('fundId').value;
-  const amt = parseFloat(document.getElementById('fundAmt').value);
-  if(!amt) return;
-  const goals = Store.get('goals');
-  const goal = goals.find(g => g.id === id);
-  if(goal) {
-    goal.current += amt;
-    Store.set('goals', goals);
-    closeModals();
-    renderGoals();
-  }
-}
-
-document.addEventListener('DOMContentLoaded', renderGoals);
 </script>
 </body>
 </html>

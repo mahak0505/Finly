@@ -147,7 +147,15 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;bac
 .goal-name{font-size:.8rem;font-weight:600;color:var(--white);display:flex;align-items:center;gap:.5rem;}
 .goal-pct{font-size:.72rem;font-weight:600;color:var(--blue-sky);}
 .goal-bar-bg{height:6px;background:var(--white-08);border-radius:100px;overflow:hidden;}
-.goal-bar-fill{height:100%;border-radius:100px;transition:width 1s ease;}
+/* Update this specific class in your shared.css */
+.goal-bar-fill {
+    height: 100%;
+    background: var(--blue-sky) !important; /* Forces the color to show */
+    border-radius: 100px;
+    transition: width 1s ease;
+    display: block; /* Ensures it takes up space */
+    min-width: 2px; /* Small sliver even at 0% */
+}
 .goal-meta{display:flex;justify-content:space-between;margin-top:.5rem;font-size:.65rem;color:var(--text-muted);}
 
 /* QUICK ADD */
