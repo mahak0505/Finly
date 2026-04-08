@@ -119,11 +119,9 @@
       <div class="chart-card">
         <div class="chart-hdr"><span class="chart-title">Budget Split</span></div>
         <div class="donut-wrap">
-          <svg width="90" height="90" viewBox="0 0 90 90">
+          <svg width="90" height="90" viewBox="0 0 90 90" id="donutSvg">
             <circle cx="45" cy="45" r="32" fill="none" stroke="rgba(59,130,246,.1)" stroke-width="14"/>
-            <circle cx="45" cy="45" r="32" fill="none" stroke="#3B82F6" stroke-width="14" stroke-dasharray="80 121" stroke-dashoffset="-10" stroke-linecap="round"/>
-            <circle cx="45" cy="45" r="32" fill="none" stroke="#10B981" stroke-width="14" stroke-dasharray="32 121" stroke-dashoffset="-92" stroke-linecap="round"/>
-            <circle cx="45" cy="45" r="32" fill="none" stroke="#F59E0B" stroke-width="14" stroke-dasharray="9 121" stroke-dashoffset="-125" stroke-linecap="round"/>
+            <!-- Dynamic circles injected via JS -->
           </svg>
           <div class="donut-legend">
             {% with colors="#3B82F6,#10B981,#F59E0B,#A78BFA,#F87171" %}
@@ -290,7 +288,39 @@ function selectCat(el, cat) {
   document.getElementById('qaCategory').value = cat;
 }
 
-// ✅ Spending trend chart using native Canvas (no Chart.js dependency needed)
+// ✅ Inject Category Payload for Donut Chart calculation
+const catData = [
+  {% for cat in by_category|slice:":4" %} { total: parseFloat("{{ cat.total }}") }, {% endfor %}
+];
+const totSpent = parseFloat("{{ total_spent }}");
+
+// ✅ Dynamic Donut SVG rendering
+if (totSpent > 0 && catData.length > 0 && document.getElementById('donutSvg')) {
+  const svg = document.getElementById('donutSvg');
+  const colors = ['#3B82F6', '#10B981', '#F59E0B', '#A78BFA'];
+  const circ = 201.06; // Math.PI * 2 * 32
+  let offset = 0;
+  
+  catData.forEach((c, i) => {
+    const fraction = c.total / totSpent;
+    const dash = fraction * circ;
+    const gap = circ - dash;
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', '45');
+    circle.setAttribute('cy', '45');
+    circle.setAttribute('r', '32');
+    circle.setAttribute('fill', 'none');
+    circle.setAttribute('stroke', colors[i % colors.length]);
+    circle.setAttribute('stroke-width', '14');
+    circle.setAttribute('stroke-dasharray', `${dash} ${gap}`);
+    circle.setAttribute('stroke-dashoffset', -offset);
+    circle.setAttribute('stroke-linecap', 'round');
+    svg.appendChild(circle);
+    offset += dash;
+  });
+}
+
+// ✅ Spending trend chart using native Canvas
 const labels = trendLabels;
 const data   = trendData;
 if (labels.length && document.getElementById('trendChart')) {
@@ -300,10 +330,16 @@ if (labels.length && document.getElementById('trendChart')) {
   canvas.height = 80;
   const max = Math.max(...data, 1);
   const w = canvas.width, h = canvas.height, pad = 10;
-  const pts = data.map((v, i) => ({
-    x: pad + (i / Math.max(data.length - 1, 1)) * (w - pad * 2),
+  
+  // Safeguard: Make 1 point visible by duplicating it as a flat line
+  let safeData = data;
+  if(safeData.length === 1) safeData = [data[0], data[0]];
+  
+  const pts = safeData.map((v, i) => ({
+    x: pad + (i / Math.max(safeData.length - 1, 1)) * (w - pad * 2),
     y: h - pad - ((v / max) * (h - pad * 2))
   }));
+  
   // Gradient fill
   const grad = ctx.createLinearGradient(0, 0, 0, h);
   grad.addColorStop(0, 'rgba(59,130,246,0.3)');
@@ -315,12 +351,22 @@ if (labels.length && document.getElementById('trendChart')) {
   ctx.closePath();
   ctx.fillStyle = grad;
   ctx.fill();
+  
   // Line
   ctx.beginPath();
   pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
   ctx.strokeStyle = '#3B82F6';
   ctx.lineWidth = 2;
   ctx.stroke();
+  
+  // Add Dots
+  pts.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 3, 0, Math.PI*2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.stroke();
+  });
 }
 </script>
 </body>
