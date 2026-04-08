@@ -81,61 +81,60 @@ let apiKey = '';
 let chatHistory = [];
 
 document.addEventListener('DOMContentLoaded', () => {
-  const p = Store.get('profile');
-  if(!p.geminiApiKey || p.geminiApiKey.trim() === '') {
-    document.getElementById('setupOverlay').style.display = 'flex';
-  } else {
-    apiKey = p.geminiApiKey.trim();
+    // Soft fallback since Django overrides are natively protecting this cache now
+    const p = Store.get('profile') || {};
+    if(!p.geminiApiKey || p.geminiApiKey.trim() === '') {
+      document.getElementById('setupOverlay').style.display = 'flex';
+    } else {
+      apiKey = p.geminiApiKey.trim();
+    }
+  });
+  
+  function appendMsg(text, isUser) {
+    const box = document.getElementById('chatBox');
+    const div = document.createElement('div');
+    div.className = `msg-row ${isUser ? 'user' : ''}`;
+    
+    const inner = document.createElement('div');
+    inner.className = `msg ${isUser ? 'user' : 'ai'}`;
+    
+    if(isUser) {
+      inner.textContent = text;
+    } else {
+      inner.innerHTML = marked.parse(text);
+    }
+    
+    div.appendChild(inner);
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
   }
-});
-
-function appendMsg(text, isUser) {
-  const box = document.getElementById('chatBox');
-  const div = document.createElement('div');
-  div.className = `msg-row ${isUser ? 'user' : ''}`;
   
-  const inner = document.createElement('div');
-  inner.className = `msg ${isUser ? 'user' : 'ai'}`;
-  
-  if(isUser) {
-    inner.textContent = text;
-  } else {
-    inner.innerHTML = marked.parse(text);
+  function showTyping() {
+    const box = document.getElementById('chatBox');
+    const id = 'typing-' + Date.now();
+    box.insertAdjacentHTML('beforeend', `<div class="msg-row" id="${id}"><div class="msg ai"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div></div>`);
+    box.scrollTop = box.scrollHeight;
+    return id;
   }
   
-  div.appendChild(inner);
-  box.appendChild(div);
-  box.scrollTop = box.scrollHeight;
-}
-
-function showTyping() {
-  const box = document.getElementById('chatBox');
-  const id = 'typing-' + Date.now();
-  box.insertAdjacentHTML('beforeend', `<div class="msg-row" id="${id}"><div class="msg ai"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div></div>`);
-  box.scrollTop = box.scrollHeight;
-  return id;
-}
-
-async function sendMsg() {
-  const inp = document.getElementById('chatInp');
-  const text = inp.value.trim();
-  if(!text || !apiKey) return;
-  
-  inp.value = '';
-  appendMsg(text, true);
-  
-  chatHistory.push({ role: 'user', parts: [{text: text}] });
-  
-  const typingId = showTyping();
-  
-  // Build system context from Store
-  const exps = Store.get('expenses');
-  const buds = Store.get('budgets');
-  const total = exps.reduce((a,c)=>a+c.amt,0);
-  
-  let sysPrompt = "System context: You are Finly AI, a highly intelligent and succinct financial advisor. Do not mention that you represent a system context. Be friendly. The user's name is " + Store.get('profile').name + ". ";
-  sysPrompt += `They have spent ₹${total} recently. Their budget limits are: ${JSON.stringify(buds)}. `;
-  sysPrompt += "Here is a brief history of their conversation:\n";
+  async function sendMsg() {
+    const inp = document.getElementById('chatInp');
+    const text = inp.value.trim();
+    if(!text || !apiKey) return;
+    
+    inp.value = '';
+    appendMsg(text, true);
+    
+    chatHistory.push({ role: 'user', parts: [{text: text}] });
+    
+    const typingId = showTyping();
+    
+    // Natively inject Django context
+    const total = "{{ total_spent }}";
+    
+    let sysPrompt = "System context: You are Finly AI, a highly intelligent and succinct financial advisor. Do not mention that you represent a system context. Be friendly. The user's name is {{ request.user.username }}. ";
+    sysPrompt += `They have spent ₹${total} recently. `;
+    sysPrompt += "Here is a brief history of their conversation:\n";
   
   try {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;

@@ -77,12 +77,12 @@
  <script>
 // Load only the API key field (the profile form now uses Django)
 function loadSettings() {
-  const p = Store.get('profile');
+  const p = Store.get('profile') || {};
   document.getElementById('sApiKey').value = p.geminiApiKey || '';
 }
 document.addEventListener('DOMContentLoaded', loadSettings);
 function saveApiKey() {
-  const p = Store.get('profile');
+  const p = Store.get('profile') || {};
   p.geminiApiKey = document.getElementById('sApiKey').value;
   Store.set('profile', p);
   

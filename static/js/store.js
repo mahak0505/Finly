@@ -78,8 +78,8 @@ const Store = {
   }
 };
 
-// Initialize on load
-Store.init();
+// Initialize on load - DEACTIVATED FOR NATIVE DJANGO RENDER
+// Store.init();
 
 // --- UI HELPERS ---
 function toggleDropdown(id) {

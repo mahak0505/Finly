@@ -610,6 +610,18 @@ function handleOvClick(e){if(e.target===document.getElementById('modalOv'))close
 function switchTab(t){['login','signup'].forEach(s=>{document.getElementById('tab-'+s).classList.toggle('active',s===t);document.getElementById('panel-'+s).classList.toggle('active',s===t);});}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
 
+document.addEventListener('DOMContentLoaded', () => {
+    const showSignup = "{{ show_signup|yesno:'true,false' }}" === "true";
+    const showLogin = "{{ show_login|yesno:'true,false' }}" === "true";
+    const hasMessages = "{{ messages|length|default:0 }}" > 0;
+
+    if (showSignup) {
+        openModal('signup');
+    } else if (showLogin || hasMessages) {
+        openModal('login');
+    }
+});
+
 
 // Scroll reveal
 const obs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target);}});},{threshold:.1});

@@ -36,8 +36,8 @@ Finly is a web-based personal finance management application built for college s
 | Layer    | Technology            |
 | -------- | --------------------- |
 | Frontend | HTML, CSS, JavaScript |
-| Backend  | Python, Flask         |
-| Database | SQLite                |
+| Backend  | Python, Django        |
+| Database | SQLite ,SQL           |
 | Charts   | Chart.js              |
 
 ---
