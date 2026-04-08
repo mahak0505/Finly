@@ -114,7 +114,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;bac
 
 /* BAR CHART */
 .bar-chart{display:flex;align-items:flex-end;gap:.35rem;height:90px;margin-top:.5rem;}
-.bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:.3rem;}
+.bar-wrap{flex:1;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:.3rem;}
 .bar{width:100%;border-radius:4px 4px 0 0;transition:opacity .2s;cursor:pointer;}
 .bar:hover{opacity:.8;}
 .bar-label{font-size:.55rem;color:var(--text-muted);}

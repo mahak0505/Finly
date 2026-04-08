@@ -100,7 +100,7 @@
         <div class="bar-chart" id="catBars">
           {% if by_category %}
             {% for cat in by_category %}
-              <div class="bar-wrap">
+              <div class="bar-wrap" style="height: 100%;">
                 <div class="bar" style="
                   height: {% widthratio cat.total total_spent 100 %}%;
                   background: {% cycle '#3B82F6' '#10B981' '#F59E0B' '#A78BFA' '#F87171' %};
@@ -300,24 +300,16 @@ if (totSpent > 0 && catData.length > 0 && document.getElementById('donutSvg')) {
   const colors = ['#3B82F6', '#10B981', '#F59E0B', '#A78BFA'];
   const circ = 201.06; // Math.PI * 2 * 32
   let offset = 0;
+  let circlesHTML = '<circle cx="45" cy="45" r="32" fill="none" stroke="rgba(59,130,246,.1)" stroke-width="14"/>';
   
   catData.forEach((c, i) => {
     const fraction = c.total / totSpent;
     const dash = fraction * circ;
     const gap = circ - dash;
-    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    circle.setAttribute('cx', '45');
-    circle.setAttribute('cy', '45');
-    circle.setAttribute('r', '32');
-    circle.setAttribute('fill', 'none');
-    circle.setAttribute('stroke', colors[i % colors.length]);
-    circle.setAttribute('stroke-width', '14');
-    circle.setAttribute('stroke-dasharray', `${dash} ${gap}`);
-    circle.setAttribute('stroke-dashoffset', -offset);
-    circle.setAttribute('stroke-linecap', 'round');
-    svg.appendChild(circle);
+    circlesHTML += `<circle cx="45" cy="45" r="32" fill="none" stroke="${colors[i % colors.length]}" stroke-width="14" stroke-dasharray="${dash} ${gap}" stroke-dashoffset="-${offset}" stroke-linecap="round"/>`;
     offset += dash;
   });
+  svg.innerHTML = circlesHTML;
 }
 
 // ✅ Spending trend chart using native Canvas
